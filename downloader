@@ -1,0 +1,70 @@
+#!/bin/bash
+
+function git_versions(){
+
+  # 60 unauthenticated requests per hour!
+  echo $(curl -s https://api.github.com/repos/$1/releases/latest \
+    | jq '.["tag_name"]' \
+    | sed 's/"//g' \
+    | sed 's/v//')
+}
+
+function download(){
+
+    echo "Download from:"$1
+    wget -v --show-progress \
+      --https-only \
+      --timestamping \
+      -P downloads \
+      $1
+}
+
+if [ ! -d downloads ]; then
+
+  # using uppercase variables as it makes the downloads.txt clearer to understand.
+  CRI=$(git_versions "kubernetes-sigs/cri-tools")
+  [ "$CRI" == "" ] && echo "Failed to load version for k8s/cri-tools" && exit 1;
+
+  RUNC=$(git_versions "opencontainers/runc")
+  [ "$RUNC" == "" ] && echo "Failed to load version for opencontainers/runc" && exit 1;
+
+  CNI=$(git_versions "containernetworking/plugins")
+  [ "$CNI" == "" ] && echo "Failed to load version for containernetworking/plugins" && exit 1;
+
+  #So containerd breaks it all by omitting the v in the 2nd part of the download!
+  #edited the downloads.txt to allow for this.
+  COND=$(git_versions "containerd/containerd")
+  [ "$COND" == "" ] && echo "Failed to load version for containerd" && exit 1;
+
+  ETCD=$(git_versions "etcd-io/etcd")
+  [ "$ETCD" == "" ] && echo "Failed to load version for etcd" && exit 1;
+
+  K8S=$(curl -s https://dl.k8s.io/release/stable.txt)
+  [ "$K8S" == "" ] && echo "Failed to load version for k8s" && exit 1;
+
+  ARCH=$(dpkg --print-architecture)
+  for l in $(cat downloads.txt); do
+        url=$(eval "echo $l");
+        download $url
+  done;
+
+  mkdir -p downloads/{client,cni-plugins,controller,worker}
+
+  tar -xvf downloads/crictl-v${CRI}-linux-${ARCH}.tar.gz  -C downloads/worker
+  tar -xvf downloads/containerd-${COND}-linux-${ARCH}.tar.gz -C downloads/worker --strip-components 1
+  tar -xvf downloads/cni-plugins-linux-${ARCH}-v${CNI}.tgz   -C downloads/cni-plugins
+  tar -xvf downloads/etcd-v${ETCD}-linux-${ARCH}.tar.gz       -C downloads       --strip-components 1 \
+        etcd-v${ETCD}-linux-${ARCH}/etcdctl \
+        etcd-v${ETCD}-linux-${ARCH}/etcd
+
+  mv downloads/{etcdctl,kubectl} downloads/client/
+  mv downloads/{etcd,kube-apiserver,kube-controller-manager,kube-scheduler} downloads/controller/
+  mv downloads/{kubelet,kube-proxy} downloads/worker/
+  mv downloads/runc.${ARCH} downloads/worker/runc
+
+  chmod +x downloads/{client,cni-plugins,controller,worker}/*
+
+else
+  echo "Downloads directory exists, assuming this taks has run."
+fi
+
