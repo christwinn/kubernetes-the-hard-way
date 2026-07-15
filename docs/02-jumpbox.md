@@ -19,7 +19,7 @@ Now that you are logged into the `jumpbox` machine as the `root` user, you will 
 ```bash
 {
   apt-get update
-  apt-get -y install wget curl vim openssl git
+  apt-get -y install wget curl vim openssl git jq
 }
 ```
 
@@ -66,6 +66,8 @@ wget -q --show-progress \
   --timestamping \
   -P downloads \
   -i downloads-$(dpkg --print-architecture).txt
+
+or run downloader, architecture independent and searches for the latest versions, then skip to Install kubectl
 ```
 
 Depending on your internet connection speed it may take a while to download over `500` megabytes of binaries, and once the download is complete, you can list them using the `ls` command:
