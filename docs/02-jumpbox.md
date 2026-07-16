@@ -10,7 +10,7 @@ Log in to the `jumpbox`:
 ssh user@jumpbox
 ```
 
-All commands will be run as the `root` user. This is being done for the sake of convenience, and will help reduce the number of commands required to set everything up.
+~~All commands will be run as the `root` user. This is being done for the sake of convenience, and will help reduce the number of commands required to set everything up.~~
 
 ### Install Command Line Utilities
 
